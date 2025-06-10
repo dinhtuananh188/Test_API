@@ -16,7 +16,8 @@ namespace Test_API.Services
             foreach (DataColumn col in dt.Columns)
             {
                 string colName = col.ColumnName.Replace(" ", "_");
-                string colType = "TEXT"; // Cải tiến sau nếu cần
+                string lowerColName = colName.ToLower();
+                string colType = lowerColName.Contains("date") ? "DateTime" : "TEXT";
                 columnDefs.Add($"\"{colName}\" {colType}");
             }
             return $"CREATE TABLE IF NOT EXISTS \"{tableName}\" (" + string.Join(", ", columnDefs) + ")";
