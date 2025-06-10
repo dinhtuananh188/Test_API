@@ -36,7 +36,14 @@ namespace Test_API.Services
                     for (int i = 0; i < dt.Columns.Count; i++)
                     {
                         if (dt.Columns[i].ColumnName.ToLower() == "id") continue;
+                        var colName = dt.Columns[i].ColumnName;
                         var value = row[i] is DBNull ? null : row[i];
+                        if (colName.ToLower().Contains("date") && value != null)
+                        {
+                            // Try to parse to DateTime, if fail keep as string
+                            if (DateTime.TryParse(value.ToString(), out var dtValue))
+                                value = dtValue.Date;
+                        }
                         param.Add($"p{paramIndex}", value);
                         paramIndex++;
                     }

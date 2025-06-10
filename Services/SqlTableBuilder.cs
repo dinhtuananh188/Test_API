@@ -17,7 +17,7 @@ namespace Test_API.Services
             {
                 string colName = col.ColumnName.Replace(" ", "_");
                 string lowerColName = colName.ToLower();
-                string colType = lowerColName.Contains("date") ? "DateTime" : "TEXT";
+                string colType = lowerColName.Contains("date") ? "DATE" : "TEXT";
                 columnDefs.Add($"\"{colName}\" {colType}");
             }
             return $"CREATE TABLE IF NOT EXISTS \"{tableName}\" (" + string.Join(", ", columnDefs) + ")";
