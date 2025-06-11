@@ -1,13 +1,13 @@
-﻿CREATE OR REPLACE PROCEDURE insert_from_json(
+CREATE OR REPLACE PROCEDURE insert_from_json(
     p_table_name VARCHAR,
-    p_json_data JSON
+    p_json_data JSON,
+    INOUT p_row_count INTEGER
 )
 LANGUAGE plpgsql
 AS $$
 DECLARE
     v_columns TEXT;
     v_select_columns TEXT;
-    v_row_count INTEGER;
 BEGIN
     -- Lấy danh sách cột từ JSON (loại bỏ cột 'id' nếu có)
     SELECT string_agg(
@@ -40,7 +40,6 @@ BEGIN
     );
 
     -- Lấy số dòng được insert
-    GET DIAGNOSTICS v_row_count = ROW_COUNT;
-    RETURN v_row_count;
+    GET DIAGNOSTICS p_row_count = ROW_COUNT;
 END;
 $$;
