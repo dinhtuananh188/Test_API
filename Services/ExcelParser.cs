@@ -1,83 +1,77 @@
 ﻿using ClosedXML.Excel;
-using System.Data;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using System.Data;
 
 namespace Test_API.Services
 {
     public class ExcelParser
     {
-        public DataTable Parse(Stream fileStream)
+        public List<Dictionary<string, object>> Parse(Stream fileStream)
         {
-            var dt = new DataTable();
-            var dateColumnIndexes = new List<int>();
+            var result = new List<Dictionary<string, object>>();
+            var dateColumnNames = new List<string>();
 
             using (var workbook = new XLWorkbook(fileStream))
             {
                 var worksheet = workbook.Worksheets.First();
                 bool firstRow = true;
+                string[] columnNames = null;
 
                 foreach (var row in worksheet.RowsUsed())
                 {
                     if (firstRow)
                     {
-                        int colIndex = 0;
-                        foreach (var cell in row.Cells())
-                        {
-                            string rawName = cell.Value.ToString();
-                            string colName = Regex.Replace(rawName.Trim(), @"\s+", "_");
-                            dt.Columns.Add(colName);
+                        columnNames = row.Cells()
+                            .Select(cell => Regex.Replace(cell.Value.ToString().Trim(), @"\s+", "_"))
+                            .ToArray();
 
-                            // Tìm các cột có tên liên quan đến thời gian
-                            string lowerName = colName.ToLower();
+                        // Tìm các cột liên quan đến thời gian
+                        for (int i = 0; i < columnNames.Length; i++)
+                        {
+                            string lowerName = columnNames[i].ToLower();
                             if (lowerName.Contains("date") || lowerName.Contains("study_from") || lowerName.Contains("study_to"))
                             {
-                                dateColumnIndexes.Add(colIndex);
+                                dateColumnNames.Add(columnNames[i]);
                             }
-                            colIndex++;
                         }
                         firstRow = false;
                     }
                     else
                     {
-                        var values = new object[dt.Columns.Count];
-                        var cells = row.Cells(1, dt.Columns.Count).ToList();
+                        var dict = new Dictionary<string, object>();
+                        var cells = row.Cells(1, columnNames.Length).ToList();
 
-                        for (int i = 0; i < dt.Columns.Count; i++)
+                        for (int i = 0; i < columnNames.Length; i++)
                         {
                             string cellText = i < cells.Count ? cells[i].GetFormattedString().Trim() : string.Empty;
 
-                            if (dateColumnIndexes.Contains(i))
+                            if (dateColumnNames.Contains(columnNames[i]))
                             {
                                 DateTime parsedDate;
-
-                                // Dùng TryParseExact với nhiều định dạng ngày phổ biến
-                                string[] formats = {
-                                    "d/M/yyyy", "dd/MM/yyyy", "dd/M/yyyy", "d/MM/yyyy"
-                                };
+                                string[] formats = { "d/M/yyyy", "dd/MM/yyyy", "dd/M/yyyy", "d/MM/yyyy" };
 
                                 if (DateTime.TryParseExact(cellText, formats, CultureInfo.InvariantCulture, DateTimeStyles.None, out parsedDate)
-                                    || DateTime.TryParse(cellText, out parsedDate)) // fallback
+                                    || DateTime.TryParse(cellText, out parsedDate))
                                 {
-                                    values[i] = parsedDate.ToString("M/d/yyyy hh:mm:ss tt", CultureInfo.InvariantCulture);
+                                    dict[columnNames[i]] = parsedDate.ToString("M/d/yyyy hh:mm:ss tt", CultureInfo.InvariantCulture);
                                 }
                                 else
                                 {
-                                    values[i] = DBNull.Value;
+                                    dict[columnNames[i]] = null;
                                 }
                             }
                             else
                             {
-                                values[i] = string.IsNullOrEmpty(cellText) ? DBNull.Value : cellText;
+                                dict[columnNames[i]] = string.IsNullOrEmpty(cellText) ? null : cellText;
                             }
                         }
-
-                        dt.Rows.Add(values);
+                        result.Add(dict);
                     }
                 }
             }
 
-            return dt;
+            return result;
         }
     }
 }

@@ -1,37 +1,34 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using System.Data;
-using System.Text.RegularExpressions;
+﻿using System.Text.RegularExpressions;
 
 namespace Test_API.Services
 {
     public class SqlTableBuilder
     {
-        public string BuildCreateTableSql(string tableName, DataTable dt)
+        public string BuildCreateTableSql(string tableName, List<Dictionary<string, object>> data)
         {
             var columnDefs = new List<string>();
-            // Chỉ thêm id SERIAL PRIMARY KEY nếu DataTable không có cột id
-            bool hasIdColumn = dt.Columns.Cast<DataColumn>().Any(c => c.ColumnName.Trim().ToLower() == "id");
-            if (!hasIdColumn)
-            {
-                columnDefs.Add("id SERIAL PRIMARY KEY");
-            }
-            foreach (DataColumn col in dt.Columns)
-            {
-                string rawName = col.ColumnName.ToString();
-                string colName = Regex.Replace(rawName.Trim(), @"\s+", "_");
+            bool hasIdColumn = false;
 
-                string lowerColName = colName.ToLower();
-                string colType;
-                if (lowerColName.Contains("date") || lowerColName.Contains("study_from") || lowerColName.Contains("study_to"))
+            if (data.Any())
+            {
+                var firstRow = data.First();
+                hasIdColumn = firstRow.Keys.Any(k => k.Trim().ToLower() == "id");
+                if (!hasIdColumn)
                 {
-                    colType = "DATE";
+                    columnDefs.Add("id SERIAL PRIMARY KEY");
                 }
-                else
+
+                foreach (var key in firstRow.Keys)
                 {
-                    colType = "TEXT";
+                    string colName = Regex.Replace(key.Trim(), @"\s+", "_");
+                    string lowerColName = colName.ToLower();
+                    string colType = lowerColName.Contains("date") || lowerColName.Contains("study_from") || lowerColName.Contains("study_to")
+                        ? "DATE"
+                        : "TEXT";
+                    columnDefs.Add($"\"{colName}\" {colType}");
                 }
-                columnDefs.Add($"\"{colName}\" {colType}");
             }
+
             return $"CREATE TABLE IF NOT EXISTS \"{tableName}\" (" + string.Join(", ", columnDefs) + ")";
         }
     }
