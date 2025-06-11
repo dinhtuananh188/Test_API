@@ -1,4 +1,6 @@
-﻿using System.Data;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using System.Data;
+using System.Text.RegularExpressions;
 
 namespace Test_API.Services
 {
@@ -15,9 +17,19 @@ namespace Test_API.Services
             }
             foreach (DataColumn col in dt.Columns)
             {
-                string colName = col.ColumnName.Replace(" ", "_");
+                string rawName = col.ColumnName.ToString();
+                string colName = Regex.Replace(rawName.Trim(), @"\s+", "_");
+
                 string lowerColName = colName.ToLower();
-                string colType = lowerColName.Contains("date") ? "DATE" : "TEXT";
+                string colType;
+                if (lowerColName.Contains("date") || lowerColName.Contains("study_from") || lowerColName.Contains("study_to"))
+                {
+                    colType = "DATE";
+                }
+                else
+                {
+                    colType = "TEXT";
+                }
                 columnDefs.Add($"\"{colName}\" {colType}");
             }
             return $"CREATE TABLE IF NOT EXISTS \"{tableName}\" (" + string.Join(", ", columnDefs) + ")";
